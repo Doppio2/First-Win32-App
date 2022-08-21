@@ -132,6 +132,9 @@
 (set-face-background 'mode-line-inactive "#7D7D7D")
 (set-face-foreground 'mode-line-inactive "#DBDBDB")
 
+;; modeline settings
+(setq vc-handled-backends nil) 
+
 ;; brackets highlight settings
 (setq show-paren-delay 0)
 (show-paren-mode 1)
