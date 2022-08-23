@@ -91,6 +91,11 @@
 (define-key global-map "\e1" 'delete-window)
 (define-key global-map "\e2" 'split-window-horizontally)
 
+; operatoin with text
+; \377 is alt-backspace
+(define-key global-map "\377" 'backward-kill-word)
+(define-key global-map [M-delete] 'kill-word)
+
 ; Smooth scroll
 (setq scroll-step 3)
 
