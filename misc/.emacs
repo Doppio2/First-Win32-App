@@ -92,6 +92,8 @@
 (define-key global-map "\e2" 'split-window-horizontally)
 
 ; operatoin with text
+(define-key global-map "\eo" 'query-replace)
+
 ; \377 is alt-backspace
 (define-key global-map "\377" 'backward-kill-word)
 (define-key global-map [M-delete] 'kill-word)
