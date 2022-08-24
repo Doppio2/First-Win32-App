@@ -7,6 +7,7 @@ First Win32_application.
 #include <windows.h>
 #include <stdint.h>
 #include <xinput.h>
+#include <dsound.h>
 
 #define internal static
 #define local_persist static
@@ -16,6 +17,7 @@ typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
+typedef int32 bool32;
 
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -38,37 +40,128 @@ struct win32_window_dimension
     int Height;
 };
 
-// TODO(Denis): This is global for now. 
+// TODO(denis): This is global for now. 
 global_variable bool GlobalRunning;
 global_variable win32_offscreen_buffer GlobalBackbuffer;
 
-// NOTE(Denis): XInputGetState
+// NOTE(denis): XInputGetState
 #define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
 typedef X_INPUT_GET_STATE(x_input_get_state);
 X_INPUT_GET_STATE(XInputGetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
 #define XInputGetState XInputGetState_
 
-// NOTE(Denis): XInputSetState
+// NOTE(denis): XInputSetState
 #define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
 typedef X_INPUT_SET_STATE(x_input_set_state);
 X_INPUT_SET_STATE(XInputSetStateStub)
 {
-    return(0);
+    return(ERROR_DEVICE_NOT_CONNECTED);
 }
 global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
+#define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
+typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
 internal void Win32LoadXInput(void)
 {
-    HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    HMODULE XInputLibrary = LoadLibraryA("xinput1_4.dll");
+
+    if(!XInputLibrary)
+    {
+        // TODO(denis): Diagnostic
+        HMODULE XInputLibrary = LoadLibraryA("xinput1_3.dll");
+    }
+    
     if(XInputLibrary)
     {
         XInputGetState = (x_input_get_state *)GetProcAddress(XInputLibrary,"XInputGetState");
+        if(!XInputGetState) {XInputGetState = XInputGetStateStub;}
+        
         XInputSetState = (x_input_set_state *)GetProcAddress(XInputLibrary,"XInputSetState");
+        if(!XInputGetState) {XInputSetState = XInputSetStateStub;}
+        
+    }
+}
+
+internal void Win32InitDSound(HWND Window, int32 SamplesPerSecond, int32 BufferSize)
+{
+    // NOTE(denis): Load the library
+    HMODULE DSoundLibrary = LoadLibraryA("dsound.dll");
+    if(DSoundLibrary)
+    { 
+        // NOTE(deins): Get a a DirectSound object! - cooperative
+        direct_sound_create *DirectSoundCreate = (direct_sound_create *) GetProcAddress(DSoundLibrary , "DirectSoundCreate");
+
+        LPDIRECTSOUND DirectSound;
+        if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0)))
+        {
+            WAVEFORMATEX WaveFormat = {};
+            WaveFormat.wFormatTag = WAVE_FORMAT_PCM;
+            WaveFormat.nChannels = 2;
+            WaveFormat.nSamplesPerSec = SamplesPerSecond;
+            WaveFormat.wBitsPerSample = 16;
+            WaveFormat.nBlockAlign = (WaveFormat.nChannels*WaveFormat.wBitsPerSample) / 8;
+            WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign;
+            WaveFormat.cbSize = 0;
+
+            if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY)))
+            {
+                DSBUFFERDESC BufferDescription = {};
+                BufferDescription.dwSize = sizeof(BufferDescription);
+                BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+                // TODO(denis): DSBCAPS_GLOBALFOCUS?
+                // NOTE(denis): "Create" a primary buffer
+                LPDIRECTSOUNDBUFFER PrimaryBuffer;
+                if(SUCCEEDED(DirectSound->CreateSoundBuffer(&BufferDescription, &PrimaryBuffer, 0)))
+                {
+                    HRESULT Error = (PrimaryBuffer->SetFormat(&WaveFormat));
+                    if(SUCCEEDED(Error))
+                    {
+                        // NOTE(denis): We have finally set the format!
+                        OutputDebugStringA("Primary buffer format was set.\n");
+                    }
+                    else
+                    {
+                        // TODO(denis): Diagnostic
+                    }
+                }
+                else
+                {
+                    // TODO(denis): Diagnostic
+                }
+            }
+            else
+            {
+                // TODO(denis): Diagnostic
+            }
+
+            // TODO(casey): DSBCAPS_GETCURRENTPOSITION2
+            DSBUFFERDESC BufferDescription = {};
+            BufferDescription.dwSize = sizeof(BufferDescription);
+            BufferDescription.dwFlags = 0;
+            BufferDescription.dwBufferBytes = BufferSize;
+            BufferDescription.lpwfxFormat = &WaveFormat;
+            LPDIRECTSOUNDBUFFER SecondaryBuffer;
+            HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0); 
+            if(SUCCEEDED(Error))
+            {
+                OutputDebugStringA("Secondary buffer created successfully .\n");
+            }
+        }
+        else
+        {
+            // TODO(denis): Diagnostic
+        }
+    }
+    else
+    {
+        // TODO(denis): Diagnostic
     }
 }
 
@@ -86,7 +179,7 @@ internal win32_window_dimension Win32GetWindowDimension(HWND Window)
 
 internal void RenderWeiredGradient(win32_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
 {
-    // TODO(Denis): Let's see what the optimizer does
+    // TODO(denis): Let's see what the optimizer does
 
     uint8 *Row = (uint8 *)Buffer->Memory;
     for(int Y = 0; Y < Buffer->Height; ++Y)
@@ -118,11 +211,11 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
     Buffer->Height = Height;
     Buffer->BytesPerPixel = 4;
 
-    // TODO(Denis): When the biHeight is negative, this is the clue to
+    // TODO(denis): When the biHeight is negative, this is the clue to
     // Windows to treat this bitmap as top-down, not bottom-up, meaning that
     // the first three bytes of the image are the color for is the top left pixel
     // in the bitmap, not the bottom left!
-    Buffer->Info.bmiHeader.biSize =sizeof(Buffer->Info.bmiHeader);
+    Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
     Buffer->Info.bmiHeader.biWidth = Buffer->Width;
     Buffer->Info.bmiHeader.biHeight = -Buffer->Height;
     Buffer->Info.bmiHeader.biPlanes = 1;
@@ -135,12 +228,12 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
     Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Width*Buffer->BytesPerPixel;
 
-    // TODO(Denis): Probably clear this to black
+    // TODO(denis): Probably clear this to black
 }
 
 internal void Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer, HDC DeviceContext, int WindowWidth, int WindowHeight)
 {
-    // TODO(Denis): Aspect ration correctoin
+    // TODO(denis): Aspect ration correctoin
     StretchDIBits(DeviceContext, 0, 0, WindowWidth, WindowHeight, 0, 0, Buffer->Width, Buffer->Height, Buffer->Memory, &Buffer->Info, DIB_RGB_COLORS, SRCCOPY);
 }
 
@@ -156,13 +249,13 @@ internal LRESULT CALLBACK Win32MainWindowCallback(HWND Window, UINT Message, WPA
 
         case WM_DESTROY:
         {
-            // Todo(Denis): Handle this as an error - recreate window?
+            // Todo(denis): Handle this as an error - recreate window?
             GlobalRunning = false;
         } break;
 
         case WM_CLOSE:
         {
-            // Todo(Denis): Handle this with a message to user?
+            // Todo(denis): Handle this with a message to user?
             GlobalRunning = false;
         } break;
 
@@ -228,6 +321,12 @@ internal LRESULT CALLBACK Win32MainWindowCallback(HWND Window, UINT Message, WPA
                 {            
                 }
             }
+
+            bool32 AltKeyWasDown = (LParam & (1 << 29));
+            if((VKCode == VK_F4) && AltKeyWasDown)
+            {
+                GlobalRunning = false;
+            }
         } break;
 
         case WM_PAINT:
@@ -278,6 +377,8 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
         
             int XOffset = 0;
             int YOffset = 0;
+
+            Win32InitDSound(Window, 48000, 48000*sizeof(int16)*2);
             
             GlobalRunning = true;
             while(GlobalRunning)
@@ -294,14 +395,14 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                     DispatchMessageA(&Message);                
                 }
 
-                // TODO(Denis): Should we poll this more more frequently 
+                // TODO(denis): Should we poll this more more frequently 
                 for(DWORD ControllerIndex = 0; ControllerIndex < XUSER_MAX_COUNT; ++ControllerIndex)
                 {
                     XINPUT_STATE ControllerState;
                     if(XInputGetState(ControllerIndex, &ControllerState) == ERROR_SUCCESS)
                     {
-                        // NOTE(Denis): This controller is plugged in
-                        // TODO(Denis): See if ControllerState.dwPacketNumber increments too rapidly
+                        // NOTE(denis): This controller is plugged in
+                        // TODO(denis): See if ControllerState.dwPacketNumber increments too rapidly
                         XINPUT_GAMEPAD *Pad = &ControllerState.Gamepad;
 
                         bool Up = (Pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
@@ -323,28 +424,27 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                     }
                     else
                     {
-                        // NOTE(Denis): The controller is not availible
+                        // NOTE(denis): The controller is not availible
                     }
                 }
                 
-                // TODO(Denis): Checkout why YOffset not working
+                // TODO(denis): Checkout why YOffset not working
                 RenderWeiredGradient(&GlobalBackbuffer, XOffset, YOffset);                                
 
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);                
                 
                 ++XOffset;
-                YOffset = +2;
             }
         }
         else
         {
-            // TODO(Denis) Logging
+            // TODO(denis) Logging
         }
     }
     else
     {
-        // TODO(Denis) Logging
+        // TODO(denis) Logging
     }
     
     return(0);

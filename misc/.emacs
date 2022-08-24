@@ -154,9 +154,11 @@
 
 (electric-pair-mode 1)
 
+;; Modding c-hook
 (add-to-list 'c-mode-common-hook
-  (lambda () (setq c-syntactic-indentation nil)))
-
+  (lambda () (setq c-tab-always-indent t)
+             (setq c-comment-only-line-offset 0)
+             (setq c-electric-pound-behavior nil)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
