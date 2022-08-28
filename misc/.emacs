@@ -145,7 +145,7 @@
 ;; brackets highlight settings
 (setq show-paren-delay 0)
 (show-paren-mode 1)
-(set-face-background 'show-paren-match "##1F1F1F")
+(set-face-background 'show-paren-match "#1F1F1F")
 (set-face-foreground 'show-paren-match "#D95B5B")
 
 ;;tabulation in modes
