@@ -8,10 +8,13 @@ First Win32_application
 #include <stdint.h>
 #include <xinput.h>
 #include <dsound.h>
+#include <math.h>
 
 #define internal static
 #define local_persist static
 #define global_variable static
+
+#define Pi32 3.1415926535f
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -23,6 +26,9 @@ typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
+
+typedef float real32;
+typedef double real64;
 
 struct win32_offscreen_buffer
 {
@@ -384,8 +390,8 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
             int ToneHz = 256;
             int16 ToneVolume = 3000;
             uint32 RunningSampleIndex = 0;
-            int SquareWavePeriod = SamplesPerSecond / ToneHz;
-            int HalfSquareWavePeriod = SquareWavePeriod / 2;
+            int WavePeriod = SamplesPerSecond / ToneHz;
+//          int HalfWavePeriod = WavePeriod / 2;
             int BytesPerSample = sizeof(int16)*2;
             int SecondaryBufferSize = SamplesPerSecond*BytesPerSample;
             
@@ -449,8 +455,13 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                 if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
                     DWORD ByteToLock = RunningSampleIndex*BytesPerSample % SecondaryBufferSize;
-                    DWORD BytesToWrite; 
-                    if(ByteToLock > PlayCursor)
+                    DWORD BytesToWrite;
+                    // TODO(denis): We need a more accurate check than ByteToLock == PlayCursor
+                    if(ByteToLock == PlayCursor)
+                    {
+                        BytesToWrite = SecondaryBufferSize;
+                    }
+                    else if(ByteToLock > PlayCursor)
                     {
                         BytesToWrite = (SecondaryBufferSize - ByteToLock);
                         BytesToWrite += PlayCursor;
@@ -475,23 +486,34 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                         DWORD Region1SampleCount = Region1Size/BytesPerSample;
                         for(DWORD SampleIndex = 0; SampleIndex < Region1SampleCount; ++SampleIndex)
                         {
-                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            // TODO(denis): Draw this out of people
+                            real32 t = 2.0f*Pi32*(real32)RunningSampleIndex / (real32)WavePeriod;
+                            real32 SineValue = sinf(t);
+                            int16 SampleValue = (int16)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+
+                            ++RunningSampleIndex;
                         }
                         
                         DWORD Region2SampleCount = Region2Size/BytesPerSample;
                         SampleOut = (int16 *)Region2;
                         for(DWORD SampleIndex = 0; SampleIndex < Region2SampleCount; ++SampleIndex)
                         {
-                            int16 SampleValue = ((RunningSampleIndex++ / HalfSquareWavePeriod) % 2) ? ToneVolume : -ToneVolume;
+                            real32 t = 2.0f*Pi32*(real32)RunningSampleIndex / (real32)WavePeriod;
+                            real32 SineValue = sinf(t);
+                            int16 SampleValue = (int16)(SineValue * ToneVolume);
                             *SampleOut++ = SampleValue;
                             *SampleOut++ = SampleValue;
+                            *SampleOut++ = SampleValue;
+
+                            ++RunningSampleIndex;
                         }
 
                         GlobalSecondaryBuffer->Unlock(Region1, Region1Size, Region2, Region2Size);
                     }
                 }
+
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);                
                 
