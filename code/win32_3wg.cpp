@@ -511,7 +511,8 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                         // TODO(denis): We will do deadzone handling later using
                         // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
                         // XINPUT_GAMEPAD_RIGHT_THUMG_DEADZONE 8689
-
+                        
+                        // TODO(denis): fix the glitch sound
                         XOffset += StickX / 4096;
                         YOffset += StickY / 4096;
 
@@ -530,7 +531,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                 // NOTE(denis): DirectSound output sound
                 DWORD PlayCursor;
                 DWORD WriteCursor;
-                if(!SoundIsPlaying && SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
+                if(SUCCEEDED(GlobalSecondaryBuffer->GetCurrentPosition(&PlayCursor, &WriteCursor)))
                 {
                     DWORD ByteToLock = (SoundOutput.RunningSampleIndex*SoundOutput.BytesPerSample) % SoundOutput.SecondaryBufferSize;
                     DWORD TargetCursor = ((PlayCursor + (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize);
