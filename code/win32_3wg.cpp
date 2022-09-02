@@ -4,14 +4,27 @@ First Win32_application
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 */
 
-#include <windows.h>
-#include <stdint.h>
-#include <xinput.h>
-#include <dsound.h>
-#include <stdio.h>
+/*
+  TODO(denis): THIS IS NOT A FINAL PLATFORM LAYER!!!
 
-// TODO(denis): Implement sine ourselves
-#include <math.h>
+  - Saved game locations
+  - Getting a handle to our own executible file
+  - Asset loading path
+  - Threading (launch thread)
+  - Raw Input (support for multiple keyboards)
+  - Sleep/timeBeginPeriod
+  - ClipCursor() (for multimonitor support)
+  - Fullscreen support
+  - WM_SETCURSOR (control cursor visibility)
+  - QueryCancelAutoPlay
+  - WM_ACTIVATEAPP (for when we are not the active application)
+  - Blit speed improvments (BitBlt)
+  - Hardware acceleration (OpenGL or Direct3D or both)
+  - GetKeyBoardLayout (for French keyboards, international WASD support)
+
+  Just a partial list of stuff!!!
+*/
+#include <stdint.h>
 
 #define internal static
 #define local_persist static
@@ -32,6 +45,16 @@ typedef uint64_t uint64;
 
 typedef float real32;
 typedef double real64;
+
+#include "3wg.cpp"
+
+#include <windows.h>
+#include <xinput.h>
+#include <dsound.h>
+#include <stdio.h>
+
+// TODO(denis): Implement sine ourselves
+#include <math.h>
 
 struct win32_offscreen_buffer
 {
@@ -76,6 +99,12 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
+
+void *PlatformLoadFile(char *FileName)
+{
+    // NOTE(denis): Implements the Win32 file loading
+    return(0);
+}
 
 internal void Win32LoadXInput(void)
 {
@@ -189,26 +218,6 @@ internal win32_window_dimension Win32GetWindowDimension(HWND Window)
     Result.Height = ClientRect.bottom - ClientRect.top;
 
     return(Result);
-}
-
-internal void RenderWeiredGradient(win32_offscreen_buffer *Buffer, int BlueOffset, int GreenOffset)
-{
-    // TODO(denis): Let's see what the optimizer does
-
-    uint8 *Row = (uint8 *)Buffer->Memory;
-    for(int Y = 0; Y < Buffer->Height; ++Y)
-    {
-        uint32 *Pixel = (uint32 *)Row;
-        for(int X = 0; X < Buffer->Width; ++X)
-        {
-            uint8 Blue = (X + BlueOffset);
-            uint8 Green = (Y + GreenOffset);
-            
-            *Pixel++ = ((Green << 8) | Blue);
-        }
-
-        Row += Buffer->Pitch;
-    }
 }
 
 internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
@@ -520,7 +529,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
 
                         // TODO(denis): We will do deadzone handling later using
                         // XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
-                        // XINPUT_GAMEPAD_RIGHT_THUMG_DEADZONE 8689
+                        // XINPUT_GAMEPAD_RIGHT_THUMG_DEADZONE 
                         
                         // TODO(denis): fix the glitch sound
                         XOffset += StickX / 4096;
@@ -534,9 +543,13 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                         // NOTE(denis): The controller is not availible
                     }
                 }
-                
-                // TODO(denis): Checkout why YOffset not working
-                RenderWeiredGradient(&GlobalBackbuffer, XOffset, YOffset);                                
+
+                game_offscreen_buffer Buffer = {};
+                Buffer.Memory = GlobalBackbuffer.Memory;
+                Buffer.Width = GlobalBackbuffer.Width;
+                Buffer.Height = GlobalBackbuffer.Height;
+                Buffer.Pitch = GlobalBackbuffer.Pitch;
+                GameUpdateAndRender(&Buffer, XOffset, YOffset);
 
                 // NOTE(denis): DirectSound output sound
                 DWORD PlayCursor;
@@ -547,8 +560,6 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
                     DWORD TargetCursor = ((PlayCursor + (SoundOutput.LatencySampleCount*SoundOutput.BytesPerSample)) % SoundOutput.SecondaryBufferSize);
                     DWORD BytesToWrite;
 
-                    // TODO(denis): Change this to using a lower latency offset from the TargetCursor
-                    // when we actually start having sound effects.
                     if(ByteToLock > TargetCursor)
                     {
                         BytesToWrite = (SoundOutput.SecondaryBufferSize - ByteToLock);
@@ -569,18 +580,17 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, LPSTR CommandeL
 
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
-
-                // TODO(denis): display the value here
+                
                 uint64 CyclesElapsed = EndCycleCount - LastCycleCount;
                 int64 CounterElapsed = EndCounter.QuadPart - LastCounter.QuadPart;
                 real64 MSPerFrame = (((1000.0f*(real64)CounterElapsed) / (real64)PerfCountFrequency));
                 real64 FPS = (real64)PerfCountFrequency / (real64)CounterElapsed;
                 real64 MCPF = ((real64)CyclesElapsed / (1000.0f * 1000.0f));
-
+#if 0
                 char Buffer[256];
                 sprintf(Buffer, "%.02fms/f, %.02ff/s, %.02fmc/f\n", MSPerFrame, FPS, MCPF);
                 OutputDebugStringA(Buffer);
-
+#endif
                 LastCounter = EndCounter;
                 LastCycleCount = EndCycleCount;
             }
