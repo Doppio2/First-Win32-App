@@ -115,7 +115,7 @@
 (defun casey-never-split-a-window nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-(cua-mode t)
+; (cua-mode t)
 
 ; Additional style stuff
 (c-set-offset 'member-init-intro '++)
@@ -124,7 +124,7 @@
 (setq evil-emacs-state-cursor '("#7FBF54" box)) 
 (setq evil-normal-state-cursor '("#7FBF54" box)) 
 (setq evil-visual-state-cursor '("#BFBFBF" box))
-(setq evil-insert-state-cursor '("#D95B5B" bar))
+(setq evil-insert-state-cursor '("#D95B5B" box))
 (setq evil-replace-state-cursor '("#D95B5B" bar))
 (setq evil-operator-state-cursor '("#D95B5B" box))
 
@@ -162,8 +162,6 @@
 ;;tabulation in modes
 (setq c-default-style "bsd" 
       c-basic-offset 4)
-
-(electric-pair-mode 1)
 
 ;; Modding c-hook
 (add-to-list 'c-mode-common-hook
