@@ -19,7 +19,7 @@
  '(mouse-wheel-follow-mouse nil)
  '(mouse-wheel-progressive-speed nil)
  '(mouse-wheel-scroll-amount '(15))
- '(package-selected-packages '(smartparens csharp-mode))
+ '(package-selected-packages '(evil smartparens csharp-mode))
  '(version-control nil))
 
 ;; Don't show the splash screen
@@ -60,7 +60,9 @@
 (require 'paren)
 (require 'cc-mode)
 (require 'ido)
+(require 'evil)
 (ido-mode t)
+(evil-mode t)
 
 ; Setup my find-files
 (define-key global-map "\ef" 'find-file)
@@ -97,6 +99,7 @@
 ; \377 is alt-backspace
 (define-key global-map "\377" 'backward-kill-word)
 (define-key global-map [M-delete] 'kill-word)
+(define-key global-map [C-delete] 'kill-whole-line)
 
 ; Smooth scroll
 (setq scroll-step 3)
@@ -117,7 +120,15 @@
 ; Additional style stuff
 (c-set-offset 'member-init-intro '++)
 
-;;colors
+;; Evil mode settings
+(setq evil-emacs-state-cursor '("#7FBF54" box)) 
+(setq evil-normal-state-cursor '("#7FBF54" box)) 
+(setq evil-visual-state-cursor '("#BFBFBF" box))
+(setq evil-insert-state-cursor '("#D95B5B" bar))
+(setq evil-replace-state-cursor '("#D95B5B" bar))
+(setq evil-operator-state-cursor '("#D95B5B" box))
+
+;; colors
 (add-to-list 'default-frame-alist '(font . "Liberation Mono-11.5"))
 (set-face-attribute 'default t :font "Liberation Mono-11.5")
 (set-face-attribute 'font-lock-builtin-face nil :foreground "#D8A51D")
@@ -166,3 +177,6 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+; Project settings
+(setq default-directory "c:/work/3wg/code")
