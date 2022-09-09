@@ -95,6 +95,7 @@
 
 ; operatoin with text
 (define-key global-map "\eo" 'query-replace)
+(define-key global-map "\eO" 'casey-replace-string)
 
 ; \377 is alt-backspace
 (define-key global-map "\377" 'backward-kill-word)
@@ -115,18 +116,22 @@
 (defun casey-never-split-a-window nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-; (cua-mode t)
+;(cua-mode t)
 
 ; Additional style stuff
 (c-set-offset 'member-init-intro '++)
 
 ;; Evil mode settings
-(setq evil-emacs-state-cursor '("#7FBF54" box)) 
+(setq evil-emacs-state-cursor '("#49483E" box)) 
 (setq evil-normal-state-cursor '("#7FBF54" box)) 
 (setq evil-visual-state-cursor '("#BFBFBF" box))
 (setq evil-insert-state-cursor '("#D95B5B" box))
 (setq evil-replace-state-cursor '("#D95B5B" bar))
 (setq evil-operator-state-cursor '("#D95B5B" box))
+
+; Evil keymap
+(define-key evil-normal-state-map (kbd "TAB") 'indent-region)
+(define-key evil-visual-state-map (kbd "TAB") 'indent-region)
 
 ;; colors
 (add-to-list 'default-frame-alist '(font . "Liberation Mono-11.5"))
@@ -142,7 +147,7 @@
 (set-face-attribute 'font-lock-variable-name-face nil :foreground "#A6978A")
 (set-face-attribute 'region nil :background "#49483E")
 (set-foreground-color "#A6978A")
-(set-background-color "#1F1F1F")
+(set-background-color "#232323")
 (set-cursor-color "#7FBF54")
 ; status bar color
 (set-face-foreground 'mode-line "#DBDBDB")
@@ -156,7 +161,7 @@
 ;; brackets highlight settings
 (setq show-paren-delay 0)
 (show-paren-mode 1)
-(set-face-background 'show-paren-match "#1F1F1F")
+(set-face-background 'show-paren-match "#232323")
 (set-face-foreground 'show-paren-match "#D95B5B")
 
 ;;tabulation in modes
