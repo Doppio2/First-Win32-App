@@ -62,7 +62,7 @@
 (require 'ido)
 (require 'evil)
 (ido-mode t)
-(evil-mode t)
+;(evil-mode t)
 
 ; Setup my find-files
 (define-key global-map "\ef" 'find-file)
@@ -93,6 +93,8 @@
 (define-key global-map "\e1" 'delete-window)
 (define-key global-map "\e2" 'split-window-horizontally)
 
+(define-key global-map (kbd "C-o") 'ff-find-other-file)
+
 ; operatoin with text
 (define-key global-map "\eo" 'query-replace)
 (define-key global-map "\eO" 'casey-replace-string)
@@ -101,6 +103,11 @@
 (define-key global-map "\377" 'backward-kill-word)
 (define-key global-map [M-delete] 'kill-word)
 (define-key global-map [C-delete] 'kill-whole-line)
+
+; searching
+(define-key c++-mode-map "\ej" 'imenu)
+(define-key global-map "\eg" 'goto-line)
+(define-key global-map "\ej" 'imenu)
 
 ; Smooth scroll
 (setq scroll-step 3)
@@ -116,7 +123,7 @@
 (defun casey-never-split-a-window nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-;(cua-mode t)
+(cua-mode t)
 
 ; Additional style stuff
 (c-set-offset 'member-init-intro '++)
@@ -129,9 +136,11 @@
 (setq evil-replace-state-cursor '("#D95B5B" bar))
 (setq evil-operator-state-cursor '("#D95B5B" box))
 
-; Evil keymap
+; Evil keymaps
 (define-key evil-normal-state-map (kbd "TAB") 'indent-region)
 (define-key evil-visual-state-map (kbd "TAB") 'indent-region)
+
+(define-key evil-normal-state-map (kbd "C-o") 'ff-find-other-file)
 
 ;; colors
 (add-to-list 'default-frame-alist '(font . "Liberation Mono-11.5"))
@@ -183,3 +192,4 @@
 
 ; Project settings
 (setq default-directory "c:/work/3wg/code")
+
