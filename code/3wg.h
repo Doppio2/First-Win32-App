@@ -1,5 +1,29 @@
 #if !defined(_3WG_H)
 
+/*
+  NOTE(denis): 
+
+  _3WG_INTERNAL:
+      0 - Build for public release.
+      1 - Build for developer only.
+      
+  _3WG_SLOW:
+      0 - Not slow code allowed!
+      1 - Slow code welcome.
+ */
+
+#if _3WG_SLOW
+// TODOD(denis): Complete assertion macro
+#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#else
+#define Assert(Expression)
+#endif
+
+#define Kilobytes(Value) ((Value)*1024LL)
+#define Megabytes(Value) (Kilobytes(Value)*1024LL)
+#define Gigabytes(Value) (Megabytes(Value)*1024LL)
+#define Terabytes(Value) (Gigabytes(Value)*1024LL)
+
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 // TODO(denis): swap, min, max ...macros???
 
@@ -69,10 +93,33 @@ struct game_controller_input
 
 struct game_input
 {
+    // TODO(denis): insert clock values here.
     game_controller_input Controllers[4];
 };
 
-internal void GameUpdateAndRender(game_input *Input, game_offscreen_buffer *Buffer, game_sound_output_buffer *SoundBuffer); 
+struct game_memory
+{
+    bool32 IsInitialized;
+    
+    uint64 PermanentStorageSize;
+    void *PermanentStorage; // NOTE(denis): REQUIRED to cleared to zero at startup
+
+    uint64 TransientStorageSize;
+    void *TransientStorage; // NOTE(denis): REQUIRED to cleared to zero at startup
+};
+
+internal void GameUpdateAndRender(game_memory *Memory, game_input *Input, game_offscreen_buffer *Buffer, game_sound_output_buffer *SoundBuffer); 
+
+//
+//
+//
+
+struct game_state
+{
+    int ToneHz;
+    int GreenOffset;
+    int BlueOffset;
+};
 
 #define _3WG_H
 #endif
