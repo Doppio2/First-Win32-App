@@ -89,10 +89,86 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
-void *PlatformLoadFile(char *FileName)
+internal debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename)
 {
-    // NOTE(denis): Implements the Win32 file loading
-    return(0);
+    debug_read_file_result Result = {};
+
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    if(FileHandle != INVALID_HANDLE_VALUE)
+    {
+        LARGE_INTEGER FileSize;
+        if(GetFileSizeEx(FileHandle, &FileSize))
+        {
+            uint32 FileSize32 = SafeTrancateUInt64(FileSize.QuadPart);
+            Result.Contents = VirtualAlloc(0, FileSize32, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            if(Result.Contents)
+            {
+                DWORD BytesRead;
+                if(ReadFile(FileHandle, Result.Contents, FileSize32, &BytesRead, 0) && (FileSize32 == BytesRead))
+                {
+                    // NOTE(denis): File read successfully
+                    Result.ContentsSize = FileSize32; 
+                }
+                else
+                {
+                    // TODO(denis): Logging
+                    DEBUGPlatformFreeFileMemory(Result.Contents);
+                    Result.Contents = 0;
+                }
+            }
+            else
+            {
+                // TODO(denis): Logging
+            }
+        }
+        else
+        {
+            // TODO(denis): Logging
+        }
+
+        CloseHandle(FileHandle);
+    }
+    else
+    {
+        // TODO(denis): Logging
+    }
+
+    return(Result);
+}
+
+internal void DEBUGPlatformFreeFileMemory(void *Memory)
+{
+    if(Memory)
+    {
+        VirtualFree(Memory, 0, MEM_RELEASE);
+    }
+}
+
+internal bool32 DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void *Memory)
+{
+    bool32 Result = false;
+    HANDLE FileHandle = CreateFileA(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
+    if(FileHandle != INVALID_HANDLE_VALUE)
+    {
+        DWORD BytesWritten;
+        if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0))
+        {
+            // NOTE(denis): File read successfully
+            Result = (BytesWritten == MemorySize);
+        }
+        else
+        {
+            // TODO(denis): Logging
+        }
+    
+        CloseHandle(FileHandle);
+    }
+    else
+    {
+        // TODO(denis): Logging
+    }
+
+    return(Result);
 }
 
 internal void Win32LoadXInput(void)
@@ -237,7 +313,7 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
     // NOTE(deins): thank for clarifying the deal with StretchDIBts and and BitBlit!
     // No more DC for us.
     int BitmapMemorySize = (Buffer->Width*Buffer->Height)*Buffer->BytesPerPixel;
-    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Width*Buffer->BytesPerPixel;
 
     // TODO(denis): Probably clear this to black
@@ -356,7 +432,7 @@ internal LRESULT CALLBACK Win32MainWindowCallback(HWND Window, UINT Message, WPA
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
             int Width = Paint.rcPaint.right - Paint.rcPaint.left;
             
-            win32_window_dimension Dimension = Win32GetWindowDimension(Window);            
+            win32_window_dimension Dimension = Win32GetWindowDimension(Window);
             Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         
