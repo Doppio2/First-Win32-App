@@ -62,7 +62,7 @@
 (require 'ido)
 (require 'evil)
 (ido-mode t)
-;(evil-mode t)
+(evil-mode t)
 
 ; Setup my find-files
 (define-key global-map "\ef" 'find-file)
@@ -123,7 +123,7 @@
 (defun casey-never-split-a-window nil)
 (setq split-window-preferred-function 'casey-never-split-a-window)
 
-(cua-mode t)
+;(cua-mode t)
 
 ; Additional style stuff
 (c-set-offset 'member-init-intro '++)
@@ -135,6 +135,8 @@
 (setq evil-insert-state-cursor '("#D95B5B" box))
 (setq evil-replace-state-cursor '("#D95B5B" bar))
 (setq evil-operator-state-cursor '("#D95B5B" box))
+
+(blink-cursor-mode 0)
 
 ; Evil keymaps
 (define-key evil-normal-state-map (kbd "TAB") 'indent-region)
@@ -192,4 +194,3 @@
 
 ; Project settings
 (setq default-directory "c:/work/3wg/code")
-
